@@ -36,7 +36,7 @@ const Navbar = () => {
         </Link>
       </nav>
 
-      {resumeCount > 3 && (
+      {resumeCount >= 1 && (
         <Link
           to="/wipe"
           title="Wipe App Data"

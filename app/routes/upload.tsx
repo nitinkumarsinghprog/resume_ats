@@ -46,16 +46,14 @@ const Upload = () => {
 
     setStatusText("Preparing data...");
     const uuid = generateUUID();
-    const data = {
+    const resumeData = {
       id: uuid,
       resumePath: uploadedFile.path,
       imagePath: uploadedImage.path,
       companyName,
       jobTitle,
       jobDescription,
-      feedback: "",
     };
-    await kv.set(`resume:${uuid}`, JSON.stringify(data));
 
     setStatusText("Analyzing...");
 
@@ -65,15 +63,31 @@ const Upload = () => {
     );
     if (!feedback) return setStatusText("Error: Failed to analyze resume");
 
-    const feedbackText =
-      typeof feedback.message.content === "string"
-        ? feedback.message.content
-        : feedback.message.content[0].text;
+    let parsedFeedback: Feedback;
 
-    data.feedback = JSON.parse(feedbackText);
+    try {
+      const feedbackText =
+        typeof feedback.message.content === "string"
+          ? feedback.message.content
+          : feedback.message.content[0]?.text;
+      if (typeof feedbackText !== "string") {
+        throw new Error("AI response did not include text feedback");
+      }
+
+      const json = feedbackText
+        .trim()
+        .replace(/^```(?:json)?\s*/i, "")
+        .replace(/\s*```$/, "");
+      parsedFeedback = JSON.parse(json) as Feedback;
+    } catch (error) {
+      console.error("Invalid AI feedback response", error);
+      setStatusText("Error: The AI returned an incomplete response. Please try again.");
+      return;
+    }
+
+    const data: Resume = { ...resumeData, feedback: parsedFeedback };
     await kv.set(`resume:${uuid}`, JSON.stringify(data));
     setStatusText("Analysis complete, redirecting...");
-    console.log(data);
     navigate(`/resume/${uuid}`);
   };
 
@@ -86,7 +100,6 @@ const Upload = () => {
     const companyName = formData.get("company-name") as string;
     const jobTitle = formData.get("job-title") as string;
     const jobDescription = formData.get("job-description") as string;
-    console.log(companyName, jobTitle, jobDescription);
     if (!file) return;
 
     handleAnalyze({ companyName, jobTitle, jobDescription, file });
@@ -102,7 +115,15 @@ const Upload = () => {
           {isProcessing ? (
             <>
               <h2>{statusText}</h2>
-              <img src="/images/resume-scan.gif" className="w-full" />
+              <div className="flex justify-center items-center mt-12">
+                <div className="w-64 md:w-80 lg:w-96">
+                  <img
+                    src="/images/resume-scan.gif"
+                    alt="Resume Scan"
+                    className="w-full h-auto object-contain"
+                  />
+                </div>
+              </div>
             </>
           ) : (
             <h2>Drop your resume for an ATS score and improvement tips</h2>
