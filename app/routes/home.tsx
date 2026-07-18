@@ -4,7 +4,7 @@ import { resumes } from "../../constants";
 import ResumeCard from "~/components/ResumeCard";
 import { useEffect, useState } from "react";
 import { usePuterStore } from "../../lib/Puter";
-import { Link, useNavigate } from "react-router";
+import { Link } from "react-router";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -14,14 +14,9 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export default function Home() {
-  const { auth, kv } = usePuterStore();
-  const navigate = useNavigate();
+  const { kv } = usePuterStore();
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [loadingResumes, setLoadingResumes] = useState(false);
-
-  useEffect(() => {
-    if (!auth.isAuthenticated) navigate("/auth?next=/");
-  }, [auth.isAuthenticated]);
 
   useEffect(() => {
     const loadResumes = async () => {
